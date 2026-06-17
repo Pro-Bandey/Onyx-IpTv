@@ -2,7 +2,7 @@ name: DB Builder Pipeline (Free IPTV Sync)
 
 on:
   schedule:
-    - cron: '0 0 * * 1,4' # Monday and Thursday at 12 AM
+    - cron: "0 0 * * 1,4" # Monday and Thursday at 12 AM
   workflow_dispatch: # Manual trigger
 
 permissions:
@@ -18,19 +18,22 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '24' # Updated to avoid deprecation warnings
-          # Removed cache: 'npm' to fix the missing package-lock.json error
+          node-version: "24"
 
       - name: Install Dependencies
-        run: npm install # This will safely generate dependencies on the fly
+        run: npm install
 
       - name: Run DB Generator Script
         run: npm run build:db
 
-      - name: Deploy to db branch
-        uses: JamesIves/github-pages-deploy-action@v4
-        with:
-          branch: db
-          folder: db
-          clean: true
-          commit-message: "chore(db): sync and shard iptv database"
+      - name: Deploy cleanly to db branch via Native Git
+        run: |
+          cd db
+          git init
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b db
+          git add .
+          git commit -m "latest iptv database sync & fetched - [skip ci]"
+          # Force push keeps the branch size incredibly small (1 commit history)
+          git push --force https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git db

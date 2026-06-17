@@ -2,7 +2,7 @@ name: Logo Optimizer Pipeline (Free Image CDN)
 
 on:
   schedule:
-    - cron: '30 0 * * 1,4' # Runs 30 mins after DB Pipeline
+    - cron: "30 0 * * 1,4"
   workflow_dispatch:
 
 permissions:
@@ -21,7 +21,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: db
-          path: data
+          path: db-data
 
       - name: Checkout logos branch (or create empty)
         uses: actions/checkout@v4
@@ -30,11 +30,26 @@ jobs:
           path: logos
         continue-on-error: true
 
+      - name: Initialize missing logos branch (First Run Fix)
+        run: |
+          if [ ! -d "logos/.git" ]; then
+            echo "Creating fresh logos branch..."
+            mkdir -p logos
+            cd logos
+            git init
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git checkout -b logos
+            echo "{}" > logos.json
+            git add .
+            git commit -m "chore: init empty logos branch [skip ci]"
+            git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git logos
+          fi
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '24' # Updated Node version
-          # Removed cache and cache-dependency-path to prevent lockfile crash
+          node-version: "24"
 
       - name: Install Dependencies
         working-directory: ./main-repo
@@ -44,10 +59,17 @@ jobs:
         working-directory: ./main-repo
         run: npm run build:logos
 
-      - name: Deploy to logos branch
-        uses: JamesIves/github-pages-deploy-action@v4
-        with:
-          branch: logos
-          folder: logos
-          clean: false
-          commit-message: "chore(logos): incremental WebP logo optimization"
+      - name: Deploy incremental updates to logos branch
+        run: |
+          cd logos
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+
+          # Only commit and push if new logos were downloaded
+          if ! git diff-index --quiet HEAD; then
+            git commit -m "latest iptv database logos Optimize & fetched - [skip ci]"
+            git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git logos
+          else
+            echo "✅ No new logos to commit. Everything is up to date."
+          fi
