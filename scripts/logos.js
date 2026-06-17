@@ -1,83 +1,86 @@
-import fs from 'fs';
+import fs from 'fs/promises';
 import path from 'path';
 import crypto from 'crypto';
-import axios from 'axios';
 import sharp from 'sharp';
 
-const DB_BRANCH_URL = `https://raw.githubusercontent.com/${process.env.GITHUB_REPOSITORY}/db`;
-const OUTPUT_DIR = './logos';
-const INDEX_FILE = path.join(OUTPUT_DIR, 'logo-index.json');
+// Paths mapped relative to how the GitHub Action mounts them
+const DB_CHANNELS_DIR = '../data/channels';
+const LOGOS_OUT_DIR = '../logos/logos';
+const LOGOS_INDEX_FILE = '../logos/logos.json';
 
-// Ensure output dir exists
-if (!fs.existsSync(OUTPUT_DIR)) {
-    fs.mkdirSync(OUTPUT_DIR, { recursive: true });
-}
+// SHA256 Hash generator for delta checking
+const hashUrl = (url) => crypto.createHash('sha256').update(url).digest('hex');
 
-// Load existing state to prevent re-processing
-let logoState = {};
-if (fs.existsSync(INDEX_FILE)) {
-    logoState = JSON.parse(fs.readFileSync(INDEX_FILE, 'utf8'));
-}
+async function buildLogos() {
+  await fs.mkdir(LOGOS_OUT_DIR, { recursive: true });
 
-function generateHash(str) {
-    return crypto.createHash('sha256').update(str).digest('hex');
-}
+  // Load state map (logo-index)
+  let logoState = {};
+  try {
+    const data = await fs.readFile(LOGOS_INDEX_FILE, 'utf-8');
+    logoState = JSON.parse(data);
+  } catch (e) {
+    console.log('[LOGOS] No existing logo state found. Starting fresh.');
+  }
 
-async function processLogos() {
-    console.log('🖼️ Starting ONYX Logo Optimization Pipeline...');
+  // Read all sharded channel files
+  let channelFiles = [];
+  try {
+    channelFiles = await fs.readdir(DB_CHANNELS_DIR);
+  } catch(e) {
+    console.error('[LOGOS] Error reading DB branch data. Ensure DB workflow ran first.');
+    return;
+  }
+
+  let downloadedCount = 0;
+  let skippedCount = 0;
+
+  for (const file of channelFiles) {
+    if (!file.endsWith('.json')) continue;
     
-    try {
-        // Fetch index.json from DB branch
-        console.log(`Fetching DB Index from: ${DB_BRANCH_URL}/index.json`);
-        const indexRes = await axios.get(`${DB_BRANCH_URL}/index.json`);
-        const countries = Object.keys(indexRes.data.countries);
+    const channelData = JSON.parse(await fs.readFile(path.join(DB_CHANNELS_DIR, file), 'utf-8'));
 
-        let processCount = 0;
+    for (const channel of channelData) {
+      if (!channel.logoUrl) continue;
 
-        for (const code of countries) {
-            try {
-                const countryRes = await axios.get(`${DB_BRANCH_URL}/countries/${code}.json`);
-                const channels = countryRes.data;
+      const urlHash = hashUrl(channel.logoUrl);
+      const expectedFileName = `${channel.logoId}.webp`;
 
-                for (const channel of channels) {
-                    if (!channel.logo) continue;
+      // Check Delta State: If hash matches, skip download completely
+      if (logoState[channel.logoId] === urlHash) {
+        skippedCount++;
+        continue;
+      }
 
-                    const hash = generateHash(channel.logo);
-                    const fileName = `${channel.id}.webp`;
-                    const filePath = path.join(OUTPUT_DIR, fileName);
+      // Download and process new/changed image
+      try {
+        console.log(`[LOGOS] Downloading: ${channel.logoUrl}`);
+        const res = await fetch(channel.logoUrl);
+        if (!res.ok) throw new Error('Dead image link');
+        
+        const arrayBuffer = await res.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
 
-                    // Skip if hash hasn't changed AND file exists
-                    if (logoState[channel.id] === hash && fs.existsSync(filePath)) {
-                        continue;
-                    }
+        // Sharp Pipeline: Optimize & convert
+        await sharp(buffer)
+          .resize(256, 256, { fit: 'inside', withoutEnlargement: true })
+          .webp({ quality: 80 })
+          .toFile(path.join(LOGOS_OUT_DIR, expectedFileName));
 
-                    try {
-                        const imgRes = await axios.get(channel.logo, { responseType: 'arraybuffer', timeout: 5000 });
-                        
-                        await sharp(imgRes.data)
-                            .resize(256, 256, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
-                            .webp({ quality: 80 })
-                            .toFile(filePath);
-
-                        logoState[channel.id] = hash; // Update state
-                        processCount++;
-                        console.log(`✅ Optimized: ${fileName}`);
-                    } catch (err) {
-                        console.log(`⚠️ Skipped dead logo for ${channel.id}`);
-                    }
-                }
-            } catch (err) {
-                console.error(`Failed to fetch country JSON for ${code}`);
-            }
-        }
-
-        // Save updated state map
-        fs.writeFileSync(INDEX_FILE, JSON.stringify(logoState, null, 2));
-        console.log(`🎉 Logo pipeline complete. Processed ${processCount} new/changed logos.`);
-
-    } catch (err) {
-        console.error('❌ Critical Pipeline Error:', err.message);
+        // Update state map upon success
+        logoState[channel.logoId] = urlHash;
+        downloadedCount++;
+        
+      } catch (error) {
+        console.log(`[LOGOS] Failed to process ${channel.logoId}: ${error.message}`);
+      }
     }
+  }
+
+  // Save the updated state map back to logos.json
+  await fs.writeFile(LOGOS_INDEX_FILE, JSON.stringify(logoState, null, 2));
+
+  console.log(`[LOGOS] Pipeline complete. Processed: ${downloadedCount} | Skipped: ${skippedCount}`);
 }
 
-processLogos();
+buildLogos().catch(console.error);

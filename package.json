@@ -1,15 +1,14 @@
 {
   "name": "onyx-iptv-pipeline",
   "version": "1.0.0",
-  "description": "Automated pipeline for ONYX IPTV",
-  "main": "db.js",
+  "description": "Automated DB and Logo pipeline for ONYX IPTV PWA",
   "type": "module",
   "scripts": {
     "build:db": "node scripts/db.js",
     "build:logos": "node scripts/logos.js"
   },
   "dependencies": {
-    "axios": "^1.6.8",
-    "sharp": "^0.33.2"
+    "iptv-playlist-parser": "^0.13.0",
+    "sharp": "^0.32.6"
   }
 }

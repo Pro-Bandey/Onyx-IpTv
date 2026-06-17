@@ -1,35 +1,36 @@
-name: DB Builder (IPTV Sync)
+name: DB Builder Pipeline (Free IPTV Sync)
 
 on:
   schedule:
     - cron: '0 0 * * 1,4'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
-  build-and-deploy:
+  build-db:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout main branch
-        uses: actions/checkout@v3
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '18'
+          cache: 'npm'
 
       - name: Install Dependencies
         run: npm install
 
-      - name: Build Database JSONs
+      - name: Run DB Generator Script
         run: npm run build:db
 
-      - name: Deploy to 'db' branch
-        uses: peaceiris/actions-gh-pages@v3
+      - name: Deploy to db branch
+        uses: JamesIves/github-pages-deploy-action@v4
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./db
-          publish_branch: db
-          force_orphan: true # Keeps branch history clean and lightning fast
-          user_name: 'github-actions[bot]'
-          user_email: 'github-actions[bot]@users.noreply.github.com'
-          commit_message: 'Automated DB Update'
+          branch: db
+          folder: db
+          clean: true
+          commit-message: "chore(db): sync and shard iptv database"

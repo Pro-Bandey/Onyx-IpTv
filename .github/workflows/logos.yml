@@ -1,46 +1,54 @@
-name: Logo Optimizer (WebP Pipeline)
+name: Logo Optimizer Pipeline (Free Image CDN)
 
 on:
   schedule:
-    - cron: '0 1 * * 1,4' # Midnight daily
+    - cron: '0 1 * * 1,4'
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build-logos:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout main branch
-        uses: actions/checkout@v3
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
+      - name: Checkout scripts (main)
+        uses: actions/checkout@v4
         with:
-          node-version: '20'
+          path: main-repo
 
-      - name: Install Dependencies
-        run: npm install
+      - name: Checkout db branch
+        uses: actions/checkout@v4
+        with:
+          ref: db
+          path: db-data
 
-      # We must checkout the existing logos branch into 'logos_output' 
-      # so the script can read the previous state and retain old images.
-      - name: Checkout 'logos' branch history
-        uses: actions/checkout@v3
-        continue-on-error: true # If branch doesn't exist yet, don't fail
+      - name: Checkout logos branch (or create empty)
+        uses: actions/checkout@v4
         with:
           ref: logos
           path: logos
+        continue-on-error: true
 
-      - name: Process Images via Sharp
-        env:
-          GITHUB_REPOSITORY: ${{ github.repository }}
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: main-repo/package-lock.json
+
+      - name: Install Dependencies
+        working-directory: ./main-repo
+        run: npm install
+
+      - name: Run Logo Engine
+        working-directory: ./main-repo
         run: npm run build:logos
 
-      - name: Deploy back to 'logos' branch
-        uses: peaceiris/actions-gh-pages@v3
+      - name: Deploy to logos branch
+        uses: JamesIves/github-pages-deploy-action@v4
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./logos
-          publish_branch: logos
-          keep_files: true # CRITICAL: Keeps old images that weren't updated
-          user_name: 'github-actions[bot]'
-          user_email: 'github-actions[bot]@users.noreply.github.com'
-          commit_message: 'Automated Logo Optimization'
+          branch: logos
+          folder: logos
+          clean: false
+          commit-message: "chore(logos): incremental WebP logo optimization"

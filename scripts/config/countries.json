@@ -1,8 +1,6 @@
-{
-  "pk": "Pakistan",
-  "in": "India",
-  "us": "United States",
-  "ae": "United Arab Emirates",
-  "sa": "Saudi Arabia",
-  "tr": "Turkey"
-}
+[
+  "us",
+  "in",
+  "pk",
+  "ru"
+]
