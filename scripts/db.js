@@ -2,7 +2,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import parser from 'iptv-playlist-parser';
 
-const CONFIG_PATH = './countries.json';
+const CONFIG_PATH = './scripts/countries.json';
 const DIST_DIR = './db';
 
 const slugify = (text) => text?.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'unknown';
