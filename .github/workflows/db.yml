@@ -3,7 +3,7 @@ name: 1. DB Builder (Free IPTV Sync)
 on:
   schedule:
     - cron: '0 0 * * 1,4' 
-  workflow_dispatch:      # Manual trigger
+  workflow_dispatch:
 
 jobs:
   build-db:
@@ -28,6 +28,6 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_branch: db
-          publish_dir: ./output-db
+          publish_dir: ./
           keep_files: false # Overwrites dead channels entirely
           commit_message: "Automated DB update: ${{ github.sha }}"
