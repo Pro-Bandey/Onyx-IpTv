@@ -1,0 +1,33 @@
+name: 1. DB Builder (Free IPTV Sync)
+
+on:
+  schedule:
+    - cron: '0 0 * * 1,4' 
+  workflow_dispatch:      # Manual trigger
+
+jobs:
+  build-db:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Run DB Pipeline
+        run: npm run build:db
+
+      - name: Deploy to "db" branch
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: db
+          publish_dir: ./output-db
+          keep_files: false # Overwrites dead channels entirely
+          commit_message: "Automated DB update: ${{ github.sha }}"
