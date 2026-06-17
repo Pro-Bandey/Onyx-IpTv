@@ -1,0 +1,38 @@
+name: 2. Logo Optimizer (Free Image Pipeline)
+
+on:
+  schedule:
+    - cron: '30 2 * * 1,4'
+  workflow_dispatch:
+
+jobs:
+  build-logos:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main branch
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Dependencies
+        run: npm install
+
+      # We must build the DB first locally so the Logo script has the targets
+      - name: Generate Target Sources
+        run: npm run build:db
+
+      - name: Run Logo Optimizer Pipeline
+        run: npm run build:logos
+        # Make sure you update GITHUB_USER / GITHUB_REPO inside scripts/logo-optimizer.js!
+
+      - name: Deploy to "logos" branch
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: logos
+          publish_dir: ./
+          keep_files: true # CRITICAL: We want to keep old images, only add/overwrite changed ones
+          commit_message: "Automated Logo optimization: ${{ github.sha }}"
