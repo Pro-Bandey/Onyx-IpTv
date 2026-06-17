@@ -1,118 +1,122 @@
-const axios = require('axios');
-const parser = require('iptv-playlist-parser');
-const fs = require('fs-extra');
-const path = require('path');
-const targetCountries = require('./config/countries.json');
+import fs from 'fs';
+import path from 'path';
+import axios from 'axios';
 
-const IPTV_SOURCE = 'https://iptv-org.github.io/iptv/index.m3u';
-const OUTPUT_DIR = path.join(__dirname, '../');
+const OUTPUT_DIR = './db';
+const COUNTRIES_FILE = './config/countries.json';
 
-// Helper to slugify text safely
-const slugify = (text) => {
-  return (text || '').toString().toLowerCase()
-    .replace(/\s+/g, '-')
-    .replace(/[^\w\-]+/g, '')
-    .replace(/\-\-+/g, '-')
-    .replace(/^-+/, '')
-    .replace(/-+$/, '');
-};
+// Initialize output directories
+if (fs.existsSync(OUTPUT_DIR)) fs.rmSync(OUTPUT_DIR, { recursive: true, force: true });
+fs.mkdirSync(OUTPUT_DIR, { recursive: true });
+fs.mkdirSync(path.join(OUTPUT_DIR, 'countries'), { recursive: true });
+fs.mkdirSync(path.join(OUTPUT_DIR, 'channels'), { recursive: true });
 
-async function buildDatabase() {
-  console.log('📦 Fetching IPTV-org playlist...');
-  const { data } = await axios.get(IPTV_SOURCE);
-  const playlist = parser.parse(data);
+const countries = JSON.parse(fs.readFileSync(COUNTRIES_FILE, 'utf8'));
 
-  const db = {
-    channels: {},
-    countries: new Set(),
-    categories: new Set()
-  };
+// Lightweight M3U Parser
+function parseM3U(m3uData, countryCode) {
+    const lines = m3uData.split('\n');
+    const channels = new Map();
 
-  console.log('⚙️ Processing and deduplicating channels...');
-  
-  playlist.items.forEach(item => {
-    const country = (item.tvg.country || 'unknown').toLowerCase();
-    const category = (item.group.title || 'uncategorized').toLowerCase();
-    
-    // 1. Filter out unwanted countries to keep DB light
-    if (country !== 'unknown' && !targetCountries.includes(country)) return;
-    
-    // 2. Validate URL lightly (skip obvious broken protocols)
-    if (!item.url || !item.url.startsWith('http')) return;
+    let currentMetadata = null;
 
-    const name = item.name.trim();
-    const channelId = slugify(name);
-    const logoId = channelId; // Link for logo pipeline
+    for (let line of lines) {
+        line = line.trim();
+        if (line.startsWith('#EXTINF:')) {
+            const idMatch = line.match(/tvg-id="([^"]*)"/);
+            const logoMatch = line.match(/tvg-logo="([^"]*)"/);
+            const groupMatch = line.match(/group-title="([^"]*)"/);
+            const nameMatch = line.split(',').pop();
 
-    // 3. Deduplication and URL Fallback logic
-    if (!db.channels[channelId]) {
-      db.channels[channelId] = {
-        id: channelId,
-        name: name,
-        urls: [],
-        country: country,
-        categories: [category],
-        logo: logoId,
-        rawLogoUrl: item.tvg.logo || '', // Temp used for logo pipeline
-        tvgId: item.tvg.id || '',
-        status: "active"
-      };
+            const name = nameMatch ? nameMatch.trim() : 'Unknown';
+            const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+            const category = groupMatch && groupMatch[1] ? groupMatch[1].toLowerCase().replace(/[^a-z0-9]+/g, '-') : 'general';
+
+            currentMetadata = {
+                id: slug,
+                name: name,
+                tvgId: idMatch ? idMatch[1] : '',
+                logo: logoMatch ? logoMatch[1] : '',
+                category: category,
+                country: countryCode
+            };
+        } else if (line.startsWith('http') && currentMetadata) {
+            const url = line;
+            if (channels.has(currentMetadata.id)) {
+                // Deduplication: Max 3 Fallback URLs
+                const existing = channels.get(currentMetadata.id);
+                if (existing.urls.length < 3 && !existing.urls.includes(url)) {
+                    existing.urls.push(url);
+                    if (!existing.categories.includes(currentMetadata.category)) {
+                        existing.categories.push(currentMetadata.category);
+                    }
+                }
+            } else {
+                channels.set(currentMetadata.id, {
+                    id: currentMetadata.id,
+                    name: currentMetadata.name,
+                    urls: [url],
+                    country: currentMetadata.country,
+                    categories: [currentMetadata.category],
+                    logo: currentMetadata.logo,
+                    tvgId: currentMetadata.tvgId
+                });
+            }
+            currentMetadata = null; // Reset
+        }
     }
-
-    // 4. Fallback constraint: Max 3 streams per channel
-    if (db.channels[channelId].urls.length < 3 && !db.channels[channelId].urls.includes(item.url)) {
-      db.channels[channelId].urls.push(item.url);
-    }
-
-    db.countries.add(country);
-    db.categories.add(category);
-  });
-
-  console.log('📂 Sharding JSON database...');
-  await fs.emptyDir(OUTPUT_DIR);
-  await fs.ensureDir(path.join(OUTPUT_DIR, 'countries'));
-  await fs.ensureDir(path.join(OUTPUT_DIR, 'categories'));
-  await fs.ensureDir(path.join(OUTPUT_DIR, 'channels'));
-
-  const channelsArray = Object.values(db.channels);
-
-  // Split by Country
-  for (const country of db.countries) {
-    const countryChannels = channelsArray.filter(c => c.country === country);
-    await fs.writeJson(path.join(OUTPUT_DIR, `countries/${country}.json`), countryChannels);
-  }
-
-  // Split by Category
-  for (const category of db.categories) {
-    const categoryChannels = channelsArray.filter(c => c.categories.includes(category));
-    await fs.writeJson(path.join(OUTPUT_DIR, `categories/${category}.json`), categoryChannels);
-  }
-
-  // Split by Country_Category (Extremely micro payload for TV frontend)
-  for (const country of db.countries) {
-    for (const category of db.categories) {
-      const filtered = channelsArray.filter(c => c.country === country && c.categories.includes(category));
-      if (filtered.length > 0) {
-         // Strip rawLogoUrl to save bytes in production
-         const cleaned = filtered.map(({ rawLogoUrl, ...rest }) => rest);
-         await fs.writeJson(path.join(OUTPUT_DIR, `channels/${country}_${category}.json`), cleaned);
-      }
-    }
-  }
-
-  // Master Index File
-  const indexFile = {
-    generatedAt: new Date().toISOString(),
-    totalChannels: channelsArray.length,
-    countries: Array.from(db.countries),
-    categories: Array.from(db.categories)
-  };
-  
-  // We save rawLogoUrls in a special file JUST for the logo pipeline action
-  await fs.writeJson(path.join(OUTPUT_DIR, 'index.json'), indexFile);
-  await fs.writeJson(path.join(OUTPUT_DIR, 'logo-source.json'), channelsArray.map(c => ({ id: c.id, url: c.rawLogoUrl })));
-
-  console.log(`✅ DB Build Complete! Total Channels: ${channelsArray.length}`);
+    return Array.from(channels.values());
 }
 
-buildDatabase().catch(console.error);
+async function buildDatabase() {
+    console.log('🚀 Starting ONYX IPTV Database Build...');
+    let globalCategories = new Set();
+    let indexData = {
+        updatedAt: new Date().toISOString(),
+        countries: countries,
+        categories: []
+    };
+
+    for (const [code, name] of Object.entries(countries)) {
+        console.log(`Fetching M3U for ${name} (${code})...`);
+        try {
+            const res = await axios.get(`https://iptv-org.github.io/iptv/countries/${code}.m3u`, { timeout: 10000 });
+            const channels = parseM3U(res.data, code);
+            
+            // 1. Save Full Country JSON
+            fs.writeFileSync(
+                path.join(OUTPUT_DIR, 'countries', `${code}.json`), 
+                JSON.stringify(channels)
+            );
+
+            // 2. Shard by Category
+            const categoryMap = new Map();
+            channels.forEach(ch => {
+                ch.categories.forEach(cat => {
+                    globalCategories.add(cat);
+                    if (!categoryMap.has(cat)) categoryMap.set(cat, []);
+                    categoryMap.get(cat).push(ch);
+                });
+            });
+
+            for (const [cat, catChannels] of categoryMap.entries()) {
+                fs.writeFileSync(
+                    path.join(OUTPUT_DIR, 'channels', `${code}_${cat}.json`), 
+                    JSON.stringify(catChannels)
+                );
+            }
+            
+            console.log(`✅ ${name}: Processed ${channels.length} unique channels.`);
+        } catch (err) {
+            console.error(`❌ Failed to fetch ${name}:`, err.message);
+        }
+    }
+
+    // 3. Save Global Index
+    indexData.categories = Array.from(globalCategories).sort();
+    fs.writeFileSync(path.join(OUTPUT_DIR, 'index.json'), JSON.stringify(indexData, null, 2));
+    
+    console.log('🎉 Database build complete! Ready for deployment.');
+}
+
+buildDatabase();
