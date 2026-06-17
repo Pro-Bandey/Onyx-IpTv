@@ -2,7 +2,7 @@ name: Logo Optimizer Pipeline (Free Image CDN)
 
 on:
   schedule:
-    - cron: '0 1 * * 1,4'
+    - cron: '30 0 * * 1,4' # Runs 30 mins after DB Pipeline
   workflow_dispatch:
 
 permissions:
@@ -33,9 +33,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
-          cache: 'npm'
-          cache-dependency-path: main-repo/package-lock.json
+          node-version: '24' # Updated Node version
+          # Removed cache and cache-dependency-path to prevent lockfile crash
 
       - name: Install Dependencies
         working-directory: ./main-repo

@@ -2,8 +2,8 @@ name: DB Builder Pipeline (Free IPTV Sync)
 
 on:
   schedule:
-    - cron: '0 0 * * 1,4'
-  workflow_dispatch:
+    - cron: '0 0 * * 1,4' # Monday and Thursday at 12 AM
+  workflow_dispatch: # Manual trigger
 
 permissions:
   contents: write
@@ -18,11 +18,11 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
-          cache: 'npm'
+          node-version: '24' # Updated to avoid deprecation warnings
+          # Removed cache: 'npm' to fix the missing package-lock.json error
 
       - name: Install Dependencies
-        run: npm install
+        run: npm install # This will safely generate dependencies on the fly
 
       - name: Run DB Generator Script
         run: npm run build:db
