@@ -3,33 +3,31 @@ import path from 'path';
 import crypto from 'crypto';
 import sharp from 'sharp';
 
-// Paths mapped relative to how the GitHub Action mounts them
 const DB_CHANNELS_DIR = '../data/channels';
 const LOGOS_OUT_DIR = '../logos/logos';
 const LOGOS_INDEX_FILE = '../logos/logos.json';
 
-// SHA256 Hash generator for delta checking
 const hashUrl = (url) => crypto.createHash('sha256').update(url).digest('hex');
 
 async function buildLogos() {
+  console.log('[LOGOS] Starting Logo Optimization Pipeline...');
   await fs.mkdir(LOGOS_OUT_DIR, { recursive: true });
 
-  // Load state map (logo-index)
   let logoState = {};
   try {
     const data = await fs.readFile(LOGOS_INDEX_FILE, 'utf-8');
     logoState = JSON.parse(data);
+    console.log(`[LOGOS] Loaded existing state with ${Object.keys(logoState).length} logos.`);
   } catch (e) {
-    console.log('[LOGOS] No existing logo state found. Starting fresh.');
+    console.log('[LOGOS] No existing logos.json found. Starting fresh database.');
   }
 
-  // Read all sharded channel files
   let channelFiles = [];
   try {
     channelFiles = await fs.readdir(DB_CHANNELS_DIR);
+    console.log(`[LOGOS] Found ${channelFiles.length} sharded channel files to scan.`);
   } catch(e) {
-    console.error('[LOGOS] Error reading DB branch data. Ensure DB workflow ran first.');
-    return;
+    throw new Error(`CRITICAL: Cannot read ${DB_CHANNELS_DIR}. Did the DB workflow run successfully first? Error: ${e.message}`);
   }
 
   let downloadedCount = 0;
@@ -46,41 +44,38 @@ async function buildLogos() {
       const urlHash = hashUrl(channel.logoUrl);
       const expectedFileName = `${channel.logoId}.webp`;
 
-      // Check Delta State: If hash matches, skip download completely
       if (logoState[channel.logoId] === urlHash) {
         skippedCount++;
         continue;
       }
 
-      // Download and process new/changed image
       try {
-        console.log(`[LOGOS] Downloading: ${channel.logoUrl}`);
         const res = await fetch(channel.logoUrl);
-        if (!res.ok) throw new Error('Dead image link');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         
         const arrayBuffer = await res.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
 
-        // Sharp Pipeline: Optimize & convert
         await sharp(buffer)
           .resize(256, 256, { fit: 'inside', withoutEnlargement: true })
           .webp({ quality: 80 })
           .toFile(path.join(LOGOS_OUT_DIR, expectedFileName));
 
-        // Update state map upon success
         logoState[channel.logoId] = urlHash;
         downloadedCount++;
-        
+        console.log(`[LOGOS] ✅ Processed: ${channel.logoId}`);
       } catch (error) {
-        console.log(`[LOGOS] Failed to process ${channel.logoId}: ${error.message}`);
+        console.log(`[LOGOS] ❌ Failed ${channel.logoId} (${channel.logoUrl}): ${error.message}`);
       }
     }
   }
 
-  // Save the updated state map back to logos.json
   await fs.writeFile(LOGOS_INDEX_FILE, JSON.stringify(logoState, null, 2));
-
-  console.log(`[LOGOS] Pipeline complete. Processed: ${downloadedCount} | Skipped: ${skippedCount}`);
+  console.log(`[LOGOS] SUCCESS! Pipeline complete. Downloaded: ${downloadedCount} | Skipped: ${skippedCount}`);
 }
 
-buildLogos().catch(console.error);
+buildLogos().catch(err => {
+  console.error('\n[FATAL ERROR]');
+  console.error(err);
+  process.exit(1); 
+});
