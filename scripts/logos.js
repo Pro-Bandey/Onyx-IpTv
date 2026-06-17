@@ -3,7 +3,7 @@ import path from 'path';
 import crypto from 'crypto';
 import sharp from 'sharp';
 
-const DB_CHANNELS_DIR = 'https://raw.githubusercontent.com/Pro-Bandey/Onyx-IpTv/db/channels';
+const DB_CHANNELS_DIR = '../db/channels';
 const LOGOS_OUT_DIR = '../logos/logos';
 const LOGOS_INDEX_FILE = '../logos/logos.json';
 
