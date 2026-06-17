@@ -1,35 +1,44 @@
-name: Generate Filtered IPTV Database
+name: DB Builder (IPTV Sync)
 
 on:
   schedule:
-    # Runs automatically every 7 days at midnight UTC
-    - cron: '0 0 */7 * *'
-  workflow_dispatch:
-    # Allows you to trigger the compile manually from GitHub UI
+    - cron: '0 0 * * 0' # Runs every week on sunday
+  workflow_dispatch: # Allows manual trigger from GitHub UI
 
 permissions:
-  contents: write
+  contents: write # Required to push to the 'db' branch
 
 jobs:
-  build:
+  build-and-deploy-db:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout main repository
+      - name: Checkout Main Repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js Environment
+      - name: Setup Node.js (TV-Optimized Engine)
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: '20'
 
-      - name: Build Database
-        run: node build.js
+      - name: Install Dependencies
+        run: npm install
 
-      - name: Deploy output to db branch
-        uses: JamesIves/github-pages-deploy-action@v4
-        with:
-          branch: db # The branch to push db.min.json to
-          folder: dist # Deploys only files inside /dist folder
-          clean: true # Ensures only current files remain on the db branch
-          commit-message: "chore: Auto-update curated database"
+      - name: Run DB Parsing & Sharding Script
+        run: npm run build:db
+
+      - name: Deploy to 'db' branch (Zero-Bloat Strategy)
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Move into the generated DB folder
+          cd db
+          
+          # Initialize a fresh git repo to create an orphaned history
+          git init
+          git checkout -b db
+          git add .
+          git commit -m "Automated DB Sync: $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          
+          # Force push to overwrite the old db branch (prevents Git history bloating)
+          git push --force https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git db
