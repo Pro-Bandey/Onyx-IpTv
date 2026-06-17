@@ -5,7 +5,7 @@ const path = require('path');
 const targetCountries = require('./config/countries.json');
 
 const IPTV_SOURCE = 'https://iptv-org.github.io/iptv/index.m3u';
-const OUTPUT_DIR = path.join(__dirname, '../output-db');
+const OUTPUT_DIR = path.join(__dirname, '../');
 
 // Helper to slugify text safely
 const slugify = (text) => {
