@@ -1,8 +1,8 @@
-name: 2. Logo Optimizer (Free Image Pipeline)
+name: Logo Optimizer (WebP Pipeline)
 
 on:
   schedule:
-    - cron: '30 2 * * 1,4'
+    - cron: '0 1 * * 1,4' # Midnight daily
   workflow_dispatch:
 
 jobs:
@@ -10,29 +10,37 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout main branch
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v3
         with:
           node-version: '20'
 
       - name: Install Dependencies
         run: npm install
 
-      # We must build the DB first locally so the Logo script has the targets
-      - name: Generate Target Sources
-        run: npm run build:db
+      # We must checkout the existing logos branch into 'logos_output' 
+      # so the script can read the previous state and retain old images.
+      - name: Checkout 'logos' branch history
+        uses: actions/checkout@v3
+        continue-on-error: true # If branch doesn't exist yet, don't fail
+        with:
+          ref: logos
+          path: logos
 
-      - name: Run Logo Optimizer Pipeline
+      - name: Process Images via Sharp
+        env:
+          GITHUB_REPOSITORY: ${{ github.repository }}
         run: npm run build:logos
-        # Make sure you update GITHUB_USER / GITHUB_REPO inside scripts/logo-optimizer.js!
 
-      - name: Deploy to "logos" branch
+      - name: Deploy back to 'logos' branch
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./logos
           publish_branch: logos
-          publish_dir: ./
-          keep_files: true # CRITICAL: We want to keep old images, only add/overwrite changed ones
-          commit_message: "Automated Logo optimization: ${{ github.sha }}"
+          keep_files: true # CRITICAL: Keeps old images that weren't updated
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
+          commit_message: 'Automated Logo Optimization'
