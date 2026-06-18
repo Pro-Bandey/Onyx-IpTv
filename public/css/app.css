@@ -1,0 +1,480 @@
+/* ==========================================================================
+   ONYX IPTV - TV-First System Stylesheet (Dual-Axis Navigation)
+   ========================================================================== */
+
+:root {
+    /* Color Palette (Optimized for OLED & High Contrast TV Panels) */
+    --bg-color: #050505;
+    --surface-color: #121212;
+    --surface-hover: #1e1e1e;
+    --accent-color: #e50914;      /* Brand Red */
+    --focus-color: #ffffff;       /* Bright White for Active Highlight */
+    --text-main: #ffffff;
+    --text-muted: #a0a0a0;
+    
+    /* Layout Variables */
+    --sidebar-collapsed: 90px;
+    --sidebar-expanded: 260px;
+    --tv-safe-padding: 50px;      /* Safeguard against screen overscan crop */
+    
+    /* Cards (16:9 Aspect Ratio) */
+    --card-width: 200px;
+    --card-height: 112px;
+    
+    /* Animations (Hardware Accelerated via GPU) */
+    --transition-snappy: 0.15s cubic-bezier(0.25, 1, 0.5, 1);
+    --transition-smooth: 0.35s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+/* --------------------------------------------------------------------------
+   GLOBAL & LAYOUT RESET
+   -------------------------------------------------------------------------- */
+* {
+    box-sizing: border-box;
+}
+
+body, html {
+    margin: 0;
+    padding: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: var(--bg-color);
+    color: var(--text-main);
+    font-family: 'Segoe UI', Roboto, Helvetica, sans-serif;
+    overflow: hidden; /* Force layout scroll lock */
+    user-select: none;
+    -webkit-font-smoothing: antialiased;
+}
+
+#app-shell {
+    display: flex;
+    width: 100vw;
+    height: 100vh;
+    position: relative;
+    overflow: hidden;
+}
+
+/* --------------------------------------------------------------------------
+   COLLAPSIBLE SIDEBAR
+   -------------------------------------------------------------------------- */
+#sidebar {
+    width: var(--sidebar-collapsed);
+    height: 100vh;
+    background-color: rgba(10, 10, 10, 0.95);
+    border-right: 1px solid rgba(255, 255, 255, 0.05);
+    display: flex;
+    flex-direction: column;
+    padding-top: var(--tv-safe-padding);
+    transition: width var(--transition-smooth);
+    z-index: 100;
+    flex-shrink: 0;
+}
+
+/* When sidebar gains focus, it glides open */
+#sidebar.sidebar-expanded {
+    width: var(--sidebar-expanded);
+}
+
+.brand-logo {
+    height: 60px;
+    display: flex;
+    align-items: center;
+    padding-left: 30px;
+    margin-bottom: 30px;
+}
+
+.logo-text {
+    font-size: 24px;
+    font-weight: 800;
+    letter-spacing: 3px;
+    color: var(--accent-color);
+    opacity: 0.9;
+}
+
+.nav-menu {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    width: 100%;
+}
+
+.nav-item {
+    display: flex;
+    align-items: center;
+    height: 55px;
+    margin: 0 15px;
+    border-radius: 8px;
+    padding-left: 18px;
+    cursor: pointer;
+    background-color: transparent;
+    transition: background-color var(--transition-snappy);
+    overflow: hidden;
+}
+
+.nav-icon {
+    font-size: 22px;
+    min-width: 30px;
+    display: inline-block;
+    text-align: center;
+}
+
+.nav-label {
+    font-size: 16px;
+    font-weight: 600;
+    margin-left: 20px;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity var(--transition-smooth);
+    color: var(--text-muted);
+}
+
+#sidebar.sidebar-expanded .nav-label {
+    opacity: 1;
+}
+
+/* --------------------------------------------------------------------------
+   MAIN VIEW CONTAINER
+   -------------------------------------------------------------------------- */
+#main-container {
+    flex-grow: 1;
+    height: 100vh;
+    padding: var(--tv-safe-padding) var(--tv-safe-padding) 0 var(--tv-safe-padding);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+}
+
+/* --------------------------------------------------------------------------
+   TOP HERO BANNER & LIVE PREVIEW WINDOW
+   -------------------------------------------------------------------------- */
+#hero-section {
+    height: 38vh;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-shrink: 0;
+}
+
+.hero-details {
+    max-width: 55%;
+}
+
+.hero-badge {
+    display: inline-block;
+    padding: 6px 12px;
+    background-color: var(--accent-color);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 800;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 15px;
+}
+
+#hero-title {
+    font-size: 40px;
+    font-weight: 700;
+    margin-bottom: 12px;
+    line-height: 1.1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.hero-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 15px;
+    text-transform: uppercase;
+}
+
+.meta-divider {
+    color: var(--accent-color);
+}
+
+#hero-description {
+    font-size: 15px;
+    line-height: 1.5;
+    color: var(--text-muted);
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* Picture-in-Picture Preview Panel */
+#preview-pip {
+    width: 320px;
+    height: 180px;
+    background-color: #000;
+    border-radius: 12px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.8);
+    border: 2px solid rgba(255,255,255,0.1);
+}
+
+#pip-video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+#pip-status-overlay {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    background-color: rgba(0,0,0,0.7);
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+/* --------------------------------------------------------------------------
+   HORIZONTAL SWIMLANES (THE ROW SCROLL ENGINE)
+   -------------------------------------------------------------------------- */
+#rows-wrapper {
+    flex-grow: 1;
+    overflow: hidden;
+    position: relative;
+    padding-bottom: 30px;
+}
+
+/* Vertically translated by JS to simulate smooth native scrolling */
+#rows-container {
+    transition: transform var(--transition-smooth);
+    will-change: transform;
+}
+
+.swimlane-row {
+    height: 185px;
+    margin-bottom: 25px;
+    display: flex;
+    flex-direction: column;
+}
+
+.row-title {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    color: var(--text-main);
+}
+
+.row-viewport {
+    width: 100%;
+    overflow: hidden;
+    position: relative;
+}
+
+/* Horizontally translated by JS to slide cards */
+.row-cards-container {
+    display: flex;
+    gap: 20px;
+    transition: transform var(--transition-smooth);
+    will-change: transform;
+    padding: 10px 0; /* Padding allows space for card scale-ups */
+}
+
+/* --------------------------------------------------------------------------
+   THE CHANNEL CARD
+   -------------------------------------------------------------------------- */
+.channel-card {
+    width: var(--card-width);
+    height: var(--card-height);
+    background-color: var(--surface-color);
+    border-radius: 8px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+}
+
+.channel-logo {
+    max-width: 60%;
+    max-height: 55%;
+    object-fit: contain;
+    filter: drop-shadow(0px 4px 6px rgba(0,0,0,0.6));
+}
+
+.channel-name {
+    position: absolute;
+    bottom: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-main);
+    text-align: center;
+    width: 90%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* --------------------------------------------------------------------------
+   SPATIAL FOCUS HIGHLIGHT RULES (TV FIRST)
+   -------------------------------------------------------------------------- */
+.focusable {
+    outline: none;
+    border: 3px solid transparent;
+    transition: transform var(--transition-snappy), 
+                border-color var(--transition-snappy), 
+                box-shadow var(--transition-snappy),
+                background-color var(--transition-snappy);
+    will-change: transform;
+}
+
+/* Sidebar item gets focus */
+.nav-item.focused {
+    background-color: var(--focus-color);
+    transform: scale(1.05);
+}
+
+.nav-item.focused .nav-icon,
+.nav-item.focused .nav-label {
+    color: var(--bg-color);
+}
+
+/* Grid card gets focus */
+.channel-card.focused {
+    transform: scale(1.12);
+    border-color: var(--focus-color);
+    box-shadow: 0 15px 30px rgba(0,0,0,0.8), 0 0 15px rgba(255,255,255,0.1);
+    z-index: 10;
+}
+
+/* --------------------------------------------------------------------------
+   FULLSCREEN MEDIA OVERLAY PLAYER
+   -------------------------------------------------------------------------- */
+#player-layer {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: #000000;
+    z-index: 999;
+    transition: opacity var(--transition-smooth);
+    opacity: 1;
+}
+
+#player-layer.player-hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+#tv-video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain; /* Prevents video distortion */
+}
+
+/* On Screen Display Menu (OSD) Overlay */
+#osd {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.7) 60%, transparent 100%);
+    padding: var(--tv-safe-padding);
+    padding-top: 60px;
+    box-sizing: border-box;
+    transition: transform var(--transition-smooth), opacity var(--transition-smooth);
+    transform: translateY(0);
+    opacity: 1;
+}
+
+#osd.osd-hidden {
+    transform: translateY(100%);
+    opacity: 0;
+}
+
+.osd-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 20px;
+}
+
+#osd-channel-name {
+    font-size: 32px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+}
+
+.osd-status {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
+/* Format Indicators */
+.format-badge {
+    padding: 6px 12px;
+    border: 1.5px solid rgba(255,255,255,0.4);
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1px;
+}
+
+/* Linear buffering/loading progress bar */
+.osd-progress-bar {
+    width: 100%;
+    height: 4px;
+    background-color: rgba(255,255,255,0.15);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    width: 0%;
+    height: 100%;
+    background-color: var(--accent-color);
+    transition: width 0.3s ease;
+}
+
+/* --------------------------------------------------------------------------
+   OSD STATUS DOT STYLES
+   -------------------------------------------------------------------------- */
+.status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.status-dot.buffering {
+    background-color: #f1c40f; /* Yellow */
+    animation: status-pulse 1s infinite alternate;
+}
+
+.status-dot.playing {
+    background-color: #2ecc71; /* Green */
+}
+
+.status-dot.error {
+    background-color: var(--accent-color); /* Red */
+}
+
+@keyframes status-pulse {
+    from { opacity: 0.3; transform: scale(0.8); }
+    to { opacity: 1; transform: scale(1.2); }
+}

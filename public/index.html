@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <!-- Viewport locked for strict TV dimensions & no user pinch-zoom -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#000000">
+    <title>ONYX IPTV</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="css/app.css">
+    
+    <!-- Streaming Engines (Deferred CDN loads to keep initial boot light) -->
+    <script src="js/libs/hls.js" defer></script>
+    <script src="js/libs/dash.all.min.js" defer></script>
+</head>
+<body>
+
+    <!-- LAYER 1: The Main UI Shell -->
+    <div id="app-shell">
+        
+        <!-- Collapsible Sidebar (Left Side) -->
+        <aside id="sidebar" class="sidebar-collapsed">
+            <div class="brand-logo">
+                <span class="logo-text">ONYX</span>
+            </div>
+            <nav class="nav-menu">
+                <div class="nav-item focusable" data-nav="home">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-label">Home</span>
+                </div>
+                <div class="nav-item focusable" data-nav="categories">
+                    <span class="nav-icon">📺</span>
+                    <span class="nav-label">Categories</span>
+                </div>
+                <div class="nav-item focusable" data-nav="countries">
+                    <span class="nav-icon">🌐</span>
+                    <span class="nav-label">Countries</span>
+                </div>
+                <div class="nav-item focusable" data-nav="favorites">
+                    <span class="nav-icon">⭐</span>
+                    <span class="nav-label">Favorites</span>
+                </div>
+                <div class="nav-item focusable" data-nav="settings">
+                    <span class="nav-icon">⚙️</span>
+                    <span class="nav-label">Settings</span>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- Main Workspace (Dynamic Content Wrapper) -->
+        <div id="main-container">
+            
+            <!-- Hero banner displaying metadata and active preview of focused card -->
+            <section id="hero-section">
+                <div class="hero-details">
+                    <div class="hero-badge" id="hero-badge">LIVE IPTV OS</div>
+                    <h1 id="hero-title">Welcome to ONYX</h1>
+                    <div class="hero-meta">
+                        <span id="hero-country">—</span>
+                        <span class="meta-divider">•</span>
+                        <span id="hero-category">Select a Channel</span>
+                    </div>
+                    <p id="hero-description">Use your TV remote arrows or keyboard D-pad to navigate. Press Enter or OK to open a stream fullscreen.</p>
+                </div>
+                
+                <!-- Live Preview Picture-in-Picture window -->
+                <div id="preview-pip">
+                    <div id="pip-status-overlay">Preview Window</div>
+                    <!-- Secondary video target used strictly for background PIP -->
+                    <video id="pip-video" muted playsinline></video>
+                </div>
+            </section>
+
+            <!-- Swimlanes (Dynamic horizontal list of rows) -->
+            <section id="rows-wrapper">
+                <div id="rows-container">
+                    <!-- Dynamic Rows will be injected here. Format:
+                    <div class="swimlane-row">
+                        <h2 class="row-title">Row Name</h2>
+                        <div class="row-viewport">
+                            <div class="row-cards-container">
+                                <div class="channel-card focusable">...</div>
+                            </div>
+                        </div>
+                    </div>
+                    -->
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- LAYER 2: Seamless Fullscreen Overlay Player -->
+    <div id="player-layer" class="player-hidden">
+        
+        <!-- Video element shared by HLS.js, Dash.js, and Native elements -->
+        <video id="tv-video" crossorigin="anonymous" playsinline></video>
+        
+        <!-- Player Overlay Interface (On Screen Display) -->
+        <div id="osd">
+            <div class="osd-content">
+                <div class="osd-info">
+                    <h2 id="osd-channel-name">Channel Name</h2>
+                    <div class="osd-status">
+                        <span id="osd-status-dot" class="status-dot buffering"></span>
+                        <span id="osd-status-text">Connecting...</span>
+                    </div>
+                </div>
+                <div class="osd-controls">
+                    <!-- Stream format badge for developer and debug verification -->
+                    <span id="osd-format-badge" class="format-badge">AUTO</span>
+                </div>
+            </div>
+            <!-- Linear loading tracking line -->
+            <div class="osd-progress-bar">
+                <div id="osd-progress" class="progress-fill"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Script Engine Files -->
+    <script src="js/spatial-navigation.js" defer></script>
+    <script src="js/player.js" defer></script>
+    <script src="js/app.js" defer></script>
+</body>
+</html>
