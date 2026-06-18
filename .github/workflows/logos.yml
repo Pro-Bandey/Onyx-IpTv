@@ -62,7 +62,7 @@ jobs:
       - name: Deploy incremental updates to logos branch
         run: |
           cd logos
-          git config user.name "github-actions[bot]"
+          git config user.name "Core Flow Bot"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add .
 
