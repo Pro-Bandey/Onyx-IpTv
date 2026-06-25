@@ -1,126 +1,384 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <!-- Viewport locked for strict TV dimensions & no user pinch-zoom -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#000000">
-    <title>ONYX IPTV</title>
-    
-    <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="css/app.css">
-    
-    <!-- Streaming Engines (Deferred CDN loads to keep initial boot light) -->
-    <script src="js/libs/hls.js" defer></script>
-    <script src="js/libs/dash.all.min.js" defer></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>ONYX IPTV</title>
+  
+  <!-- Progressive Web App Settings -->
+  <meta name="theme-color" content="#0a0a0c">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="manifest.webmanifest">
+  
+  
+  <link rel="stylesheet" href="css/incdex.css">
 </head>
-<body>
+<body class="tv-mode">
 
-    <!-- LAYER 1: The Main UI Shell -->
-    <div id="app-shell">
+  <!-- Splash / Boot Loader Screen -->
+  <div id="splash-screen" class="splash-container active">
+    <div class="splash-content">
+      <div class="logo-wrapper">
+        <span class="logo-brand">ONYX</span>
+        <span class="logo-sub">IPTV</span>
+      </div>
+      <div class="spinner-wrapper">
+        <svg class="spinner" viewBox="0 0 50 50">
+          <circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="4"></circle>
+        </svg>
+      </div>
+      <div id="splash-status" class="splash-status-text">Initializing Database...</div>
+    </div>
+  </div>
+
+  <!-- Background Video Player Surface -->
+  <div id="video-surface" class="video-surface-container">
+    <video id="onyx-player" playsinline></video>
+    <!-- Dark Vignette Overlay for readable TV menus over active stream -->
+    <div class="video-vignette"></div>
+  </div>
+
+  <!-- Global App Workspace -->
+  <div id="app" class="app-grid-layout">
+    
+    <!-- Sidebar Navigation Menu (Netflix Style) -->
+    <nav id="sidebar" class="sidebar-navigation mini-mode" data-nav-container="true">
+      <div class="sidebar-header">
+        <div class="brand-badge">O</div>
+        <span class="brand-text">ONYX</span>
+      </div>
+      
+      <div class="nav-links">
+        <button class="nav-item active" data-focusable="true" data-view="home" id="nav-home">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+            <polyline points="9 22 9 12 15 12 15 22"/>
+          </svg>
+          <span class="nav-label">Home</span>
+        </button>
+
+        <button class="nav-item" data-focusable="true" data-view="countries" id="nav-countries">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="2" y1="12" x2="22" y2="12"/>
+            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+          </svg>
+          <span class="nav-label">Countries</span>
+        </button>
+
+        <button class="nav-item" data-focusable="true" data-view="categories" id="nav-categories">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="7" height="7"/>
+            <rect x="14" y="3" width="7" height="7"/>
+            <rect x="14" y="14" width="7" height="7"/>
+            <rect x="3" y="14" width="7" height="7"/>
+          </svg>
+          <span class="nav-label">Categories</span>
+        </button>
+
+        <button class="nav-item" data-focusable="true" data-view="favorites" id="nav-favorites">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+          </svg>
+          <span class="nav-label">Favorites</span>
+        </button>
+
+        <button class="nav-item" data-focusable="true" data-view="search" id="nav-search">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <span class="nav-label">Search</span>
+        </button>
+      </div>
+
+      <div class="sidebar-footer">
+        <button class="nav-item" data-focusable="true" data-view="settings" id="nav-settings">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+          <span class="nav-label">Settings</span>
+        </button>
+      </div>
+    </nav>
+
+    <!-- Main Workspace Area -->
+    <main class="main-content">
+      
+      <!-- Top Action Bar -->
+      <header class="app-header">
+        <div class="breadcrumb-container">
+          <span id="breadcrumb-root">ONYX</span>
+          <span class="breadcrumb-divider">/</span>
+          <span id="breadcrumb-current" class="active-path">HOME</span>
+        </div>
+        <div class="header-status-group">
+          <div id="live-indicator" class="live-status-indicator">
+            <span class="indicator-dot"></span>
+            <span class="indicator-text">ONLINE</span>
+          </div>
+          <div id="app-clock" class="digital-clock">00:00 PM</div>
+        </div>
+      </header>
+
+      <!-- View Containers -->
+      <div id="viewports" class="viewport-canvas">
         
-        <!-- Collapsible Sidebar (Left Side) -->
-        <aside id="sidebar" class="sidebar-collapsed">
-            <div class="brand-logo">
-                <span class="logo-text">ONYX</span>
+        <!-- View: Home / Dashboard -->
+        <section id="view-home" class="view-panel active">
+          <div class="hero-billboard">
+            <div class="billboard-content">
+              <span class="badge-accent">RECOMMENDED FOR YOU</span>
+              <h1 class="billboard-title">No Active Channel</h1>
+              <p class="billboard-description">Select a country or custom playlist category below to begin streaming content in low-latency WebP optimized structure.</p>
+              <div class="billboard-actions">
+                <button id="billboard-quickplay" class="btn btn-primary" data-focusable="true">
+                  <svg viewBox="0 0 24 24" fill="currentColor">
+                    <polygon points="5 3 19 12 5 21 5 3"/>
+                  </svg>
+                  <span>Quick Play</span>
+                </button>
+              </div>
             </div>
-            <nav class="nav-menu">
-                <div class="nav-item focusable" data-nav="home">
-                    <span class="nav-icon">🏠</span>
-                    <span class="nav-label">Home</span>
-                </div>
-                <div class="nav-item focusable" data-nav="categories">
-                    <span class="nav-icon">📺</span>
-                    <span class="nav-label">Categories</span>
-                </div>
-                <div class="nav-item focusable" data-nav="countries">
-                    <span class="nav-icon">🌐</span>
-                    <span class="nav-label">Countries</span>
-                </div>
-                <div class="nav-item focusable" data-nav="favorites">
-                    <span class="nav-icon">⭐</span>
-                    <span class="nav-label">Favorites</span>
-                </div>
-                <div class="nav-item focusable" data-nav="settings">
-                    <span class="nav-icon">⚙️</span>
-                    <span class="nav-label">Settings</span>
-                </div>
-            </nav>
-        </aside>
+          </div>
+          
+          <div class="content-row">
+            <h2 class="row-title">Browse Countries</h2>
+            <div id="home-countries-grid" class="horizontal-scroll-grid" data-row-container="true">
+              <!-- Dynamically populated country cards -->
+            </div>
+          </div>
 
-        <!-- Main Workspace (Dynamic Content Wrapper) -->
-        <div id="main-container">
+          <div class="content-row">
+            <h2 class="row-title">Browse Top Categories</h2>
+            <div id="home-categories-grid" class="horizontal-scroll-grid" data-row-container="true">
+              <!-- Dynamically populated category cards -->
+            </div>
+          </div>
+        </section>
+
+        <!-- View: Countries Grid -->
+        <section id="view-countries" class="view-panel">
+          <div class="panel-header-desc">
+            <h2>Countries Grid</h2>
+            <p>Select a region to retrieve localized structural sharded streams.</p>
+          </div>
+          <div id="countries-grid" class="vertical-grid-panel" data-row-container="true">
+            <!-- Full country lists -->
+          </div>
+        </section>
+
+        <!-- View: Categories Grid -->
+        <section id="view-categories" class="view-panel">
+          <div class="panel-header-desc">
+            <h2>Categories Grid</h2>
+            <p>Explore genres, sports, news, and entertainment feeds.</p>
+          </div>
+          <div id="categories-grid" class="vertical-grid-panel" data-row-container="true">
+            <!-- Full category lists -->
+          </div>
+        </section>
+
+        <!-- View: Favorites -->
+        <section id="view-favorites" class="view-panel">
+          <div class="panel-header-desc">
+            <h2>My Favorites</h2>
+            <p>Quick access to channels stored locally on this machine.</p>
+          </div>
+          <div id="favorites-empty" class="state-empty">
+            <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+            </svg>
+            <p>No channels added to Favorites yet. Press the Favorite key or Action button on a focused channel card to build your list.</p>
+          </div>
+          <div id="favorites-grid" class="vertical-grid-panel hidden" data-row-container="true">
+            <!-- Favorites elements populate here -->
+          </div>
+        </section>
+
+        <!-- View: Search Panel -->
+        <section id="view-search" class="view-panel">
+          <div class="search-layout">
+            <div class="search-input-wrapper">
+              <input type="text" id="search-field" placeholder="Search channels..." data-focusable="true" readonly>
+              <button id="search-clear-btn" class="search-clear" data-focusable="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="18" y1="6" x2="6" y2="18"/>
+                  <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </div>
             
-            <!-- Hero banner displaying metadata and active preview of focused card -->
-            <section id="hero-section">
-                <div class="hero-details">
-                    <div class="hero-badge" id="hero-badge">LIVE IPTV OS</div>
-                    <h1 id="hero-title">Welcome to ONYX</h1>
-                    <div class="hero-meta">
-                        <span id="hero-country">—</span>
-                        <span class="meta-divider">•</span>
-                        <span id="hero-category">Select a Channel</span>
-                    </div>
-                    <p id="hero-description">Use your TV remote arrows or keyboard D-pad to navigate. Press Enter or OK to open a stream fullscreen.</p>
+            <div class="search-split-pane">
+              <!-- On-Screen TV Keyboard (Critical for remote interface) -->
+              <div class="tv-keyboard-container">
+                <div id="tv-keyboard" class="keyboard-grid">
+                  <!-- Dynamically bound TV-optimized buttons -->
                 </div>
-                
-                <!-- Live Preview Picture-in-Picture window -->
-                <div id="preview-pip">
-                    <div id="pip-status-overlay">Preview Window</div>
-                    <!-- Secondary video target used strictly for background PIP -->
-                    <video id="pip-video" muted playsinline></video>
+              </div>
+              
+              <!-- Search Results -->
+              <div class="search-results-pane">
+                <div id="search-results-grid" class="vertical-grid-panel" data-row-container="true">
+                  <!-- Realtime filtering results live here -->
                 </div>
-            </section>
+                <div id="search-empty" class="state-empty">
+                  <p>Type keywords using the on-screen keyboard or connected inputs to query global sharded database indexes.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
 
-            <!-- Swimlanes (Dynamic horizontal list of rows) -->
-            <section id="rows-wrapper">
-                <div id="rows-container">
-                    <!-- Dynamic Rows will be injected here. Format:
-                    <div class="swimlane-row">
-                        <h2 class="row-title">Row Name</h2>
-                        <div class="row-viewport">
-                            <div class="row-cards-container">
-                                <div class="channel-card focusable">...</div>
-                            </div>
-                        </div>
-                    </div>
-                    -->
-                </div>
-            </section>
-        </div>
+        <!-- View: Custom Dynamic / Shard Channel View -->
+        <section id="view-channel-grid" class="view-panel">
+          <div class="panel-header-desc inline-header">
+            <div>
+              <h2 id="channel-grid-title">Unknown Shard</h2>
+              <p id="channel-grid-subtitle">0 Channels found</p>
+            </div>
+            <button id="btn-back-grid" class="btn btn-secondary" data-focusable="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="19" y1="12" x2="5" y2="12"/>
+                <polyline points="12 19 5 12 12 5"/>
+              </svg>
+              <span>Back</span>
+            </button>
+          </div>
+          <div id="channel-list-container" class="vertical-grid-panel" data-row-container="true">
+            <!-- Population dynamically via category or country fetch -->
+          </div>
+        </section>
+
+        <!-- View: Settings Config -->
+        <section id="view-settings" class="view-panel">
+          <div class="panel-header-desc">
+            <h2>Settings & Configuration</h2>
+            <p>Control system behavior, buffer levels, and cache structures.</p>
+          </div>
+          <div class="settings-form">
+            <div class="settings-card">
+              <h3>Database Settings</h3>
+              <div class="settings-option">
+                <label for="setting-hls-latency">Low Latency Mode (HLS.js)</label>
+                <button id="setting-hls-latency" class="setting-toggle" data-focusable="true" data-toggle="true">
+                  <span>ENABLED</span>
+                </button>
+              </div>
+              <div class="settings-option">
+                <label for="setting-stream-switch">Auto-Switch URL on Failover</label>
+                <button id="setting-stream-switch" class="setting-toggle" data-focusable="true" data-toggle="true">
+                  <span>ENABLED</span>
+                </button>
+              </div>
+            </div>
+            <div class="settings-card">
+              <h3>System Information</h3>
+              <div class="system-stats">
+                <p><strong>App Platform:</strong> ONYX IPTV Live OS PWA</p>
+                <p><strong>Engine State:</strong> Native Web Assembly Engine Enabled</p>
+                <p><strong>Storage Profile:</strong> High Capacity DB / Cache Web-Storage</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- Full Screen TV Video Player Overlay HUD Controls -->
+  <div id="player-hud" class="player-hud-overlay">
+    <!-- Top Bar HUD -->
+    <div class="hud-top">
+      <button id="hud-back" class="hud-btn" data-focusable="true" aria-label="Exit Player">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <polyline points="15 18 9 12 15 6"/>
+        </svg>
+      </button>
+      <div class="hud-title-wrapper">
+        <h2 id="hud-channel-name">No Stream Playing</h2>
+        <span id="hud-category-badge" class="badge-accent">M3U8 FEED</span>
+      </div>
     </div>
 
-    <!-- LAYER 2: Seamless Fullscreen Overlay Player -->
-    <div id="player-layer" class="player-hidden">
-        
-        <!-- Video element shared by HLS.js, Dash.js, and Native elements -->
-        <video id="tv-video" crossorigin="anonymous" playsinline></video>
-        
-        <!-- Player Overlay Interface (On Screen Display) -->
-        <div id="osd">
-            <div class="osd-content">
-                <div class="osd-info">
-                    <h2 id="osd-channel-name">Channel Name</h2>
-                    <div class="osd-status">
-                        <span id="osd-status-dot" class="status-dot buffering"></span>
-                        <span id="osd-status-text">Connecting...</span>
-                    </div>
-                </div>
-                <div class="osd-controls">
-                    <!-- Stream format badge for developer and debug verification -->
-                    <span id="osd-format-badge" class="format-badge">AUTO</span>
-                </div>
-            </div>
-            <!-- Linear loading tracking line -->
-            <div class="osd-progress-bar">
-                <div id="osd-progress" class="progress-fill"></div>
-            </div>
-        </div>
+    <!-- Screen Centered Playback Status Indicators -->
+    <div class="hud-center">
+      <div id="player-spinner" class="player-loading-spinner hidden">
+        <svg class="spinner" viewBox="0 0 50 50">
+          <circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="4"></circle>
+        </svg>
+        <div id="player-loading-text" class="spinner-caption">Buffering Feed Stream...</div>
+      </div>
     </div>
 
-    <!-- Application Script Engine Files -->
-    <script src="js/spatial-navigation.js" defer></script>
-    <script src="js/player.js" defer></script>
-    <script src="js/app.js" defer></script>
+    <!-- Bottom Action Bar HUD -->
+    <div class="hud-bottom">
+      <div class="playback-controls-wrapper">
+        <div class="hud-progress-container">
+          <div class="hud-indicator-pill">LIVE PLAYBACK</div>
+          <div id="hud-resolution-badge" class="hud-resolution-pill">AUTO</div>
+          <div id="hud-url-badge" class="hud-url-pill">FEED [0]</div>
+        </div>
+        
+        <div class="hud-control-row" data-row-container="true">
+          <button id="hud-prev" class="hud-control-btn" data-focusable="true" aria-label="Previous Channel">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="19 20 9 12 19 4 19 20"/>
+              <line x1="5" y1="19" x2="5" y2="5"/>
+            </svg>
+          </button>
+          
+          <button id="hud-play" class="hud-control-btn btn-main-action" data-focusable="true" aria-label="Play or Pause">
+            <svg id="hud-play-icon" class="hidden" viewBox="0 0 24 24" fill="currentColor">
+              <polygon points="5 3 19 12 5 21 5 3"/>
+            </svg>
+            <svg id="hud-pause-icon" viewBox="0 0 24 24" fill="currentColor">
+              <rect x="6" y="4" width="4" height="16"/>
+              <rect x="14" y="4" width="4" height="16"/>
+            </svg>
+          </button>
+          
+          <button id="hud-next" class="hud-control-btn" data-focusable="true" aria-label="Next Channel">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="5 4 15 12 5 20 5 4"/>
+              <line x1="19" y1="5" x2="19" y2="19"/>
+            </svg>
+          </button>
+
+          <button id="hud-cycle-url" class="hud-control-btn" data-focusable="true" aria-label="Cycle Fallback Stream">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+            </svg>
+          </button>
+
+          <button id="hud-favorite" class="hud-control-btn" data-focusable="true" aria-label="Toggle Favorite">
+            <svg id="hud-fav-icon-outline" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+            </svg>
+            <svg id="hud-fav-icon-solid" class="hidden color-fav" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Realtime Toast Notifications (Safe status logs on-screen) -->
+  <div id="toast-container" class="toast-wrapper"></div>
+
+  <!-- Structural Media Foundations Libraries -->
+  <script src="js/libs/hls.js"></script>
+  <script src="js/libs/dash.all.min.js"></script>
+
+  <!-- TV System Modules Execution -->
+  <script type="module" src="js/navigation.js"></script>
+  <script type="module" src="js/player.js"></script>
+  <script type="module" src="js/api.js"></script>
+  <script type="module" src="js/index.js"></script>
 </body>
 </html>

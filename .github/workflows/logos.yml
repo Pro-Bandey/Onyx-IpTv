@@ -2,7 +2,7 @@ name: Logo Optimizer Pipeline (Free Image CDN)
 
 on:
   schedule:
-    - cron: "30 0 * * 1,4"
+    - cron: "0 1 * * 1"
   workflow_dispatch:
 
 permissions:

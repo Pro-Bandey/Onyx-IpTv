@@ -2,8 +2,8 @@ name: DB Builder Pipeline (Free IPTV Sync)
 
 on:
   schedule:
-    - cron: "0 0 * * 1,4" # Monday and Thursday at 12 AM
-  workflow_dispatch: # Manual trigger
+    - cron: "0 0 * * 1"
+  workflow_dispatch:
 
 permissions:
   contents: write
