@@ -12,8 +12,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="manifest" href="manifest.webmanifest">
   
-  
-  <link rel="stylesheet" href="css/incdex.css">
+  <!-- Unified Application Stylesheet -->
+  <link rel="stylesheet" href="css/index.css">
 </head>
 <body class="tv-mode">
 
@@ -145,6 +145,14 @@
             </div>
           </div>
           
+          <!-- Dynamic Feature: Recently Played Carousel (Fades in if populated) -->
+          <div id="recently-played-row" class="content-row hidden">
+            <h2 class="row-title">Recently Played</h2>
+            <div id="home-recent-grid" class="horizontal-scroll-grid" data-row-container="true">
+              <!-- Instantly recalled channels populate here -->
+            </div>
+          </div>
+          
           <div class="content-row">
             <h2 class="row-title">Browse Countries</h2>
             <div id="home-countries-grid" class="horizontal-scroll-grid" data-row-container="true">
@@ -203,7 +211,7 @@
         <section id="view-search" class="view-panel">
           <div class="search-layout">
             <div class="search-input-wrapper">
-              <input type="text" id="search-field" placeholder="Search channels..." data-focusable="true" readonly>
+              <input type="text" id="search-field" class="clickable-input" placeholder="Search channels..." data-focusable="true" readonly>
               <button id="search-clear-btn" class="search-clear" data-focusable="true">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <line x1="18" y1="6" x2="6" y2="18"/>
@@ -213,7 +221,7 @@
             </div>
             
             <div class="search-split-pane">
-              <!-- On-Screen TV Keyboard (Critical for remote interface) -->
+              <!-- On-Screen TV Keyboard (Active layout within Search Panel) -->
               <div class="tv-keyboard-container">
                 <div id="tv-keyboard" class="keyboard-grid">
                   <!-- Dynamically bound TV-optimized buttons -->
@@ -275,6 +283,19 @@
                 </button>
               </div>
             </div>
+
+            <!-- Dynamic Feature: Custom M3U / Portal Source URL Configuration -->
+            <div class="settings-card">
+              <h3>Custom Portal Source</h3>
+              <div class="settings-option-vertical">
+                <label for="setting-m3u-url">M3U Playlist URL</label>
+                <div class="input-action-group">
+                  <input type="text" id="setting-m3u-url" class="clickable-input text-box-field" placeholder="Enter custom M3U URL..." data-focusable="true" readonly>
+                  <button id="btn-load-custom-m3u" class="btn btn-primary" data-focusable="true">Load</button>
+                </div>
+              </div>
+            </div>
+
             <div class="settings-card">
               <h3>System Information</h3>
               <div class="system-stats">
@@ -315,9 +336,26 @@
       </div>
     </div>
 
+    <!-- Dynamic Feature: Stream Quality / Fallback Selector Drawer Panel -->
+    <div id="hud-stream-panel" class="hud-side-panel hidden">
+      <div class="drawer-header">
+        <h3>Stream Sources</h3>
+      </div>
+      <div id="hud-streams-list" class="drawer-list" data-row-container="true">
+        <!-- Dynamically populated list of fallback URLs as selectable targets -->
+      </div>
+    </div>
+
     <!-- Bottom Action Bar HUD -->
     <div class="hud-bottom">
       <div class="playback-controls-wrapper">
+        
+        <!-- Dynamic Feature: Electronic Program Guide (EPG) Metadata HUD Banner -->
+        <div class="hud-epg-container">
+          <div id="hud-epg-now" class="epg-now">Current Program Details Loading...</div>
+          <div id="hud-epg-next" class="epg-next">Next Program Loading...</div>
+        </div>
+
         <div class="hud-progress-container">
           <div class="hud-indicator-pill">LIVE PLAYBACK</div>
           <div id="hud-resolution-badge" class="hud-resolution-pill">AUTO</div>
@@ -349,6 +387,14 @@
             </svg>
           </button>
 
+          <!-- manual stream panel toggle trigger -->
+          <button id="hud-stream-selector" class="hud-control-btn" data-focusable="true" aria-label="Select Stream Quality">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            </svg>
+          </button>
+
           <button id="hud-cycle-url" class="hud-control-btn" data-focusable="true" aria-label="Cycle Fallback Stream">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
@@ -368,17 +414,31 @@
     </div>
   </div>
 
+  <!-- Global Feature: TV-Keyboard Modal Overlay (Acts as unified text input for all forms) -->
+  <div id="keyboard-modal" class="keyboard-modal-overlay hidden">
+    <div class="keyboard-modal-content">
+      <h3 id="kbd-modal-title">Enter Text</h3>
+      <div class="kbd-input-wrapper">
+        <input type="text" id="kbd-modal-input" placeholder="Type here..." data-focusable="true" readonly>
+      </div>
+      <div id="modal-keyboard" class="modal-keyboard-grid">
+        <!-- Built dynamically to capture focus -->
+      </div>
+      <div class="kbd-modal-actions" data-row-container="true">
+        <button id="btn-kbd-submit" class="btn btn-primary" data-focusable="true">Done</button>
+        <button id="btn-kbd-cancel" class="btn btn-secondary" data-focusable="true">Cancel</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Realtime Toast Notifications (Safe status logs on-screen) -->
   <div id="toast-container" class="toast-wrapper"></div>
 
-  <!-- Structural Media Foundations Libraries -->
+  <!-- Structural Media Foundations Libraries (Loaded synchronously before modules) -->
   <script src="js/libs/hls.js"></script>
   <script src="js/libs/dash.all.min.js"></script>
 
-  <!-- TV System Modules Execution -->
-  <script type="module" src="js/navigation.js"></script>
-  <script type="module" src="js/player.js"></script>
-  <script type="module" src="js/api.js"></script>
+  <!-- Single Entry Point execution module -->
   <script type="module" src="js/index.js"></script>
 </body>
 </html>
